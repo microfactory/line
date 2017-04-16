@@ -1,14 +1,27 @@
 variable "region" {}
 variable "deployment" {}
 variable "name" {}
-variable "implementation" {}
+variable "package" {}
+variable "timeout" {
+  default = "10"
+}
+
+variable "memory" {
+  default = "128"
+}
+
 variable "env" {
   type = "map"
   default = {}
 }
 
+variable "resource_attributes" {
+  type = "map"
+  default = {}
+}
+
 //the default policy json is bogus and wont provide give any permission
-variable "policy" {
+variable "permissions" {
   default = <<EOF
 {
   "Version": "2012-10-17",
@@ -82,7 +95,7 @@ resource "aws_iam_user" "runtime" {
 resource "aws_iam_user_policy" "runtime" {
   name = "${var.deployment}-runtime-${var.name}"
   user = "${aws_iam_user.runtime.name}"
-  policy = "${var.policy}"
+  policy = "${var.permissions}"
 }
 
 resource "aws_iam_access_key" "runtime" {
@@ -97,8 +110,8 @@ data "template_file" "env" {
   template = ""
   vars {
     "LINE_DEPLOYMENT" = "${var.deployment}"
+    "LINE_ATTRIBUTES" = "${jsonencode(var.resource_attributes)}"
     "LINE_AWS_REGION" = "${var.region}"
-    "LINE_AWS_RUNTIME_POLICY" = "${var.policy}"
     "LINE_AWS_ACCESS_KEY_ID" = "${aws_iam_access_key.runtime.id}"
     "LINE_AWS_SECRET_ACCESS_KEY" = "${aws_iam_access_key.runtime.secret}"
   }
@@ -110,12 +123,12 @@ data "template_file" "env" {
 
 resource "aws_lambda_function" "func" {
   function_name = "${var.deployment}-${var.name}"
-  filename = "${var.implementation}"
-  source_code_hash = "${base64sha256(file("${var.implementation}"))}"
+  filename = "${var.package}"
+  source_code_hash = "${base64sha256(file("${var.package}"))}"
   role = "${aws_iam_role.lambda.arn}"
 
-  timeout = "10"
-  memory_size = "128"
+  timeout = "${var.timeout}"
+  memory_size = "${var.memory}"
   handler = "handler.Handle"
   runtime = "python2.7"
   environment = {
@@ -128,7 +141,10 @@ resource "aws_cloudwatch_log_group" "gateway" {
     retention_in_days = 60
 }
 
-
 output "arn" {
   value = "${aws_lambda_function.func.arn}"
+}
+
+output "environment" {
+  value = "${merge(data.template_file.env.vars, var.env)}"
 }

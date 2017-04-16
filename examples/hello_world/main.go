@@ -7,11 +7,18 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/microfactory/line"
 )
 
 var gatewayHandler = line.NewGatewayHandler(0, http.HandlerFunc(
 	func(w http.ResponseWriter, r *http.Request) {
+		sess := line.SessionFromContext(r.Context())
+		db := dynamodb.New(sess)
+		//@TODO how we get a table name
+
+		_ = db
+
 		fmt.Fprintln(w, `{"hello": "world"}`)
 	}))
 

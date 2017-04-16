@@ -2,3 +2,5 @@ package: github.com/microfactory/line
 import:
 - package: github.com/aws/aws-sdk-go
   version: ^1.8.0
+- package: github.com/advanderveer/go-dynamo
+  version: f0918f0e799dd5eff770a26838f4bbd7a9e26f78

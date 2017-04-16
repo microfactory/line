@@ -3,6 +3,9 @@ variable "owner" {}
 variable "project" {}
 
 variable "region_1" { default = "eu-west-1" }
+provider "aws" {
+  region = "${var.region_1}"
+}
 
 //
 // Deployment
@@ -16,10 +19,10 @@ module "deployment" {
 }
 
 //
-// Service Resources
+// Resources
 //
 
-resource "aws_dynamodb_table" "basic-dynamodb-table" {
+resource "aws_dynamodb_table" "t1" {
   name           = "${module.deployment.id}-GameScores"
   read_capacity  = 1
   write_capacity = 1
@@ -35,10 +38,25 @@ resource "aws_dynamodb_table" "basic-dynamodb-table" {
     name = "GameTitle"
     type = "S"
   }
+
+  attribute {
+    name = "TopScore"
+    type = "N"
+  }
+
+  global_secondary_index {
+    name               = "idx1"
+    hash_key           = "GameTitle"
+    range_key          = "TopScore"
+    write_capacity     = 1
+    read_capacity      = 1
+    projection_type    = "INCLUDE"
+    non_key_attributes = ["UserId"]
+  }
 }
 
 //
-// Permission Policy
+// Resource Permissions
 //
 
 data "aws_iam_policy_document" "observers" {
@@ -54,7 +72,7 @@ data "aws_iam_policy_document" "observers" {
       "dynamodb:Scan"
     ]
     resources = [
-      "${aws_dynamodb_table.basic-dynamodb-table.arn}*"
+      "${aws_dynamodb_table.t1.arn}*"
     ]
   }
 }
@@ -69,10 +87,11 @@ module "gateway_observer" {
   deployment = "${module.deployment.id}"
 
   name = "gateway"
-  implementation = "handler.zip"
-  policy = "${data.aws_iam_policy_document.observers.json}"
-  env = {
-    "BAR" = "FOO"
+  package = "handler.zip"
+  permissions = "${data.aws_iam_policy_document.observers.json}"
+  resource_attributes = {
+    "my-table-name" = "${aws_dynamodb_table.t1.name}"
+    "my-table-name-idx-a" = "${lookup(aws_dynamodb_table.t1.global_secondary_index[0], "name")}"
   }
 }
 
@@ -82,10 +101,11 @@ module "schedule_observer" {
   deployment = "${module.deployment.id}"
 
   name = "schedule"
-  implementation = "handler.zip"
-  policy = "${data.aws_iam_policy_document.observers.json}"
-  env = {
-    "FOO" = "BAR"
+  package = "handler.zip"
+  permissions = "${data.aws_iam_policy_document.observers.json}"
+  resource_attributes = {
+    "my-table-name" = "${aws_dynamodb_table.t1.name}"
+    "my-table-name-idx-a" = "${lookup(aws_dynamodb_table.t1.global_secondary_index[0], "name")}"
   }
 }
 
@@ -94,7 +114,7 @@ module "schedule_observer" {
 //
 
 module "gateway_stream" {
-  source = "../../modules/gateway"
+  source = "../../modules/gateway/proxy"
   region = "${var.region_1}"
   deployment = "${module.deployment.id}"
 

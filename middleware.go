@@ -28,8 +28,8 @@ func EarlyTimeout(shutdownTimeMillis int64) func(Handler) Handler {
 	}
 }
 
-//FromContext will return a aws session from the lambda context or panic if it isn't available
-func FromContext(ctx context.Context) *session.Session {
+//SessionFromContext will return a aws session from the lambda context or panic if it isn't available
+func SessionFromContext(ctx context.Context) *session.Session {
 	sess, ok := ctx.Value(sessionKey).(*session.Session)
 	if !ok {
 		panic("no aws session available in context")
