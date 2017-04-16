@@ -1,2 +1,2 @@
 # line
-A framework for reactive architectures directly on on Amazon AWS
+A framework for application development on AWS Lambda
