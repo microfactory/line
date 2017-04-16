@@ -72,7 +72,7 @@ module "gateway_observer" {
   implementation = "handler.zip"
   policy = "${data.aws_iam_policy_document.observers.json}"
   env = {
-    "LINE_STRIP_BASEPATH" = 1
+    "BAR" = "FOO"
   }
 }
 

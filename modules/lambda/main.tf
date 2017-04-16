@@ -97,6 +97,7 @@ data "template_file" "env" {
   template = ""
   vars {
     "LINE_DEPLOYMENT" = "${var.deployment}"
+    "LINE_AWS_REGION" = "${var.region}"
     "LINE_AWS_RUNTIME_POLICY" = "${var.policy}"
     "LINE_AWS_ACCESS_KEY_ID" = "${aws_iam_access_key.runtime.id}"
     "LINE_AWS_SECRET_ACCESS_KEY" = "${aws_iam_access_key.runtime.secret}"

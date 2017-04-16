@@ -1,27 +1,32 @@
 package main
 
-import "encoding/json"
+import (
+	"context"
+	"encoding/json"
+	"regexp"
 
-// Context provides information about Lambda execution environment.
-type Context struct {
-	FunctionName          string       `json:"function_name"`
-	FunctionVersion       string       `json:"function_version"`
-	InvokedFunctionARN    string       `json:"invoked_function_arn"`
-	MemoryLimitInMB       int          `json:"memory_limit_in_mb,string"`
-	AWSRequestID          string       `json:"aws_request_id"`
-	LogGroupName          string       `json:"log_group_name"`
-	LogStreamName         string       `json:"log_stream_name"`
-	RemainingTimeInMillis func() int64 `json:"-"`
-}
+	"github.com/microfactory/line"
+	"github.com/microfactory/line/session"
+)
 
-//Handle lambda events
-func Handle(ev json.RawMessage, ctx *Context) (interface{}, error) {
-	//@TODO the Line library should do:
-	// - multiplex multiple lambda functions onto some handlers
-	// - allow little boilerplate api gateway proxy handling
-	// - add better typing of aws events from certain Streams
-	// - automatically map and initialize aws services from a policy document
-	// - make arbitrary environment variables available
+var gatewayHandler = line.HandlerFunc(
+	func(ctx context.Context, msg json.RawMessage) (interface{}, error) {
+		return "hello gateway", nil
+	})
 
-	return "hello world", nil
+var scheduleHandler = line.HandlerFunc(
+	func(ctx context.Context, msg json.RawMessage) (interface{}, error) {
+		return "hello schedule", nil
+	})
+
+//Handle will route lambda events to the specific handler
+func Handle(msg json.RawMessage, invoc *line.Invocation) (interface{}, error) {
+	mux := line.NewMux()
+	mux.MatchARN(regexp.MustCompile(`-gateway$`), gatewayHandler)
+	mux.MatchARN(regexp.MustCompile(`-schedule$`), gatewayHandler)
+
+	mux.Use(line.EarlyTimeout(5000)) //gives handlers 5sec to clean up
+	mux.Use(session.LineSession())   //add an aws session to the context
+
+	return mux.Handle(msg, invoc)
 }
