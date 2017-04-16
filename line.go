@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+type ctxKey int
+
+const (
+	sessionCtxKey    ctxKey = 0
+	invocationCtxKey ctxKey = 1
+	attributesCtxKey ctxKey = 2
+)
+
 //Handler interface allows any type to handle lambda events
 type Handler interface {
 	HandleEvent(ctx context.Context, msg json.RawMessage) (interface{}, error)
@@ -19,12 +27,40 @@ type HandlerFunc func(ctx context.Context, msg json.RawMessage) (interface{}, er
 //Middleware allows plugins to manipulate the context and message passed to handlers
 type Middleware func(Handler) Handler
 
-func buildChain(f Handler, m ...Middleware) Handler {
-	if len(m) == 0 {
-		return f
+func (mux *Mux) buildChain(endpoint Handler) Handler {
+	// Return ahead of time if there aren't any middlewares for the chain
+	if len(mux.middleware) == 0 {
+		return endpoint
 	}
 
-	return m[0](buildChain(f, m[1:cap(m)]...))
+	// Wrap the end handler with the middleware chain
+	h := mux.middleware[len(mux.middleware)-1](endpoint)
+	for i := len(mux.middleware) - 2; i >= 0; i-- {
+		h = mux.middleware[i](h)
+	}
+
+	return h
+
+	// // Return ahead of time if there aren't any middlewares for the chain
+	// if len(middlewares) == 0 {
+	// 	return endpoint
+	// }
+	//
+	// // Wrap the end handler with the middleware chain
+	// h := middlewares[len(middlewares)-1](endpoint)
+	// for i := len(middlewares) - 2; i >= 0; i-- {
+	// 	h = middlewares[i](h)
+	// }
+	//
+	//
+	//
+	// if len(m) == 0 {
+	// 	return f
+	// }
+	//
+	// fmt.Println(m)
+	//
+	// return m[0](buildChain(f, m[1:cap(m)]...))
 }
 
 //HandleEvent implements Handler
@@ -61,13 +97,12 @@ func (mux *Mux) Handle(msg json.RawMessage, invoc *Invocation) (interface{}, err
 	for exp, handler := range mux.handlers {
 		if exp.MatchString(invoc.InvokedFunctionARN) {
 			ctx := context.Background()
-			ctx = context.WithValue(ctx, invocationKey, invoc)
-
-			wrapped := buildChain(HandlerFunc(func(ctx context.Context, msg json.RawMessage) (interface{}, error) {
+			ctx = context.WithValue(ctx, invocationCtxKey, invoc)
+			endpoint := HandlerFunc(func(ctx context.Context, msg json.RawMessage) (interface{}, error) {
 				return handler.HandleEvent(ctx, msg)
-			}), mux.middleware...)
+			})
 
-			return wrapped.HandleEvent(ctx, msg)
+			return mux.buildChain(endpoint).HandleEvent(ctx, msg)
 		}
 
 		testedExp = append(testedExp, exp.String())

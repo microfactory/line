@@ -110,7 +110,7 @@ data "template_file" "env" {
   template = ""
   vars {
     "LINE_DEPLOYMENT" = "${var.deployment}"
-    "LINE_ATTRIBUTES" = "${jsonencode(var.resource_attributes)}"
+    "LINE_RESOURCE_ATTRIBUTES" = "${jsonencode(var.resource_attributes)}"
     "LINE_AWS_REGION" = "${var.region}"
     "LINE_AWS_ACCESS_KEY_ID" = "${aws_iam_access_key.runtime.id}"
     "LINE_AWS_SECRET_ACCESS_KEY" = "${aws_iam_access_key.runtime.secret}"

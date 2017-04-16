@@ -14,12 +14,8 @@ type Invocation struct {
 	RemainingTimeInMillis func() int64 `json:"-"`
 }
 
-type key int
-
-const invocationKey key = 0
-
 //InvocationFromContext returns the original invocation context from a generic context
 func InvocationFromContext(ctx context.Context) (*Invocation, bool) {
-	inv, ok := ctx.Value(invocationKey).(*Invocation)
+	inv, ok := ctx.Value(invocationCtxKey).(*Invocation)
 	return inv, ok
 }

@@ -82,8 +82,6 @@ func (gwh *GatewayHandler) HandleEvent(ctx context.Context, msg json.RawMessage)
 		return nil, errors.Wrap(err, "failed to create HTTP request")
 	}
 
-	r = r.WithContext(ctx)
-
 	for k, val := range req.Headers {
 		for _, v := range strings.Split(val, ",") {
 			r.Header.Add(k, strings.TrimSpace(v))
@@ -96,7 +94,7 @@ func (gwh *GatewayHandler) HandleEvent(ctx context.Context, msg json.RawMessage)
 		Buffer:     bytes.NewBuffer(nil),
 	}
 
-	gwh.httpH.ServeHTTP(w, r)
+	gwh.httpH.ServeHTTP(w, r.WithContext(ctx))
 
 	resp := &GatewayResponse{
 		StatusCode: w.statusCode,
