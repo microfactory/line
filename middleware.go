@@ -3,7 +3,6 @@ package line
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"time"
 
@@ -97,8 +96,6 @@ func ResourceAttributes() func(Handler) Handler {
 	if err != nil {
 		panic("failed to unmarshal LINE_RESOURCE_ATTRIBUTES env, is it valid JSON?")
 	}
-
-	fmt.Println(attributes)
 
 	return func(h Handler) Handler {
 		return HandlerFunc(

@@ -55,6 +55,16 @@ resource "aws_dynamodb_table" "t1" {
   }
 }
 
+resource "aws_api_gateway_deployment" "main" {
+  depends_on = ["module.gateway_stream"]
+  rest_api_id = "${module.gateway_stream.api_id}"
+  stage_name = "default"
+}
+
+output "endpoint" {
+  value = "https://${module.gateway_stream.api_id}.execute-api.${var.region_1}.amazonaws.com/${aws_api_gateway_deployment.main.stage_name}"
+}
+
 //
 // Resource Permissions
 //
@@ -95,6 +105,11 @@ module "gateway_observer" {
   }
 }
 
+output "gateway_env" {
+  value = "${module.gateway_observer.environment}"
+}
+
+
 module "schedule_observer" {
   source = "../../modules/lambda"
   region = "${var.region_1}"
@@ -120,13 +135,4 @@ module "gateway_stream" {
 
   name = "gateway"
   observer = "${module.gateway_observer.arn}"
-}
-
-module "schedule_stream" {
-  source = "../../modules/schedule"
-  region = "${var.region_1}"
-  deployment = "${module.deployment.id}"
-
-  name = "schedule"
-  observer = "${module.schedule_observer.arn}"
 }
